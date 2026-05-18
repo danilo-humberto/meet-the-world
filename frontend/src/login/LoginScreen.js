@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { useState } from 'react';
 import {
+  Alert,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -7,15 +11,34 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-
-import './Login.css';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [entrando, setEntrando] = useState(false);
+
+  async function entrar() {
+    if (!email.trim() || !senha.trim()) {
+      Alert.alert('Campos obrigatórios', 'Preencha e-mail e senha para continuar.');
+      return;
+    }
+
+    try {
+      setEntrando(true);
+
+      const emailNormalizado = email.trim().toLowerCase();
+      const auth = getAuth();
+
+      await signInWithEmailAndPassword(auth, emailNormalizado, senha);
+
+      navigation.replace('Main');
+    } catch (error) {
+      Alert.alert('Erro ao entrar', 'E-mail ou senha inválidos.');
+    } finally {
+      setEntrando(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -65,11 +88,12 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           <TouchableOpacity
-            style={styles.loginButton}
+            style={[styles.loginButton, entrando && styles.loginButtonDisabled]}
             activeOpacity={0.8}
-            onPress={() => navigation.replace('Main')}
+            disabled={entrando}
+            onPress={entrar}
           >
-            <Text style={styles.loginButtonText}>Entrar</Text>
+            <Text style={styles.loginButtonText}>{entrando ? 'Entrando...' : 'Entrar'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -147,6 +171,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
     color: '#ffffff',

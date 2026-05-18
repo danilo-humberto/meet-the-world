@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import {
-  Alert,
   ActivityIndicator,
+  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -10,12 +13,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-import axios from 'axios';
 
-import { api, USUARIO_PADRAO_ID } from '../services/api';
-import './DetalhePais.css';
+import { api } from '../services/api';
+import { buscarUsuarioPerfil, getUsuarioIdFavoritos } from '../perfil/perfilApi';
 
 const DETAIL_FIELDS = [
   'name',
@@ -66,65 +66,27 @@ const subRegioes = {
   Polynesia: 'Polinésia',
 };
 
-function traduzirRegiao(valor) {
-  return regioes[valor] || valor || 'Não informado';
-}
-
-function traduzirSubRegiao(valor) {
-  return subRegioes[valor] || valor || 'Não informado';
-}
-
-function formatarNumero(valor) {
-  if (!valor && valor !== 0) {
-    return 'Não informado';
-  }
-
-  return Number(valor).toLocaleString('pt-BR');
-}
-
-function formatarLista(objeto) {
-  if (!objeto) {
-    return 'Não informado';
-  }
-
-  return Object.values(objeto).join(', ');
-}
-
-function formatarMoeda(currencies) {
-  if (!currencies) {
-    return 'Não informado';
-  }
-
-  const codigo = Object.keys(currencies)[0];
-  const moeda = currencies[codigo];
-  const nome = moeda?.name === 'Brazilian real' ? 'Real' : moeda?.name;
-
-  return nome ? `${nome} (${codigo})` : codigo;
-}
-
-function formatarFuso(timezones = []) {
-  if (!timezones.length) {
-    return 'Não informado';
-  }
-
-  return timezones.find((timezone) => timezone === 'UTC-03:00') || timezones[0];
-}
-
 function formatarPaisDetalhado(pais) {
+  const capital = Array.isArray(pais.capital) ? pais.capital[0] : pais.capital;
+  const continente = Array.isArray(pais.continents) ? pais.continents[0] : pais.continents;
+  const codigoMoeda = pais.currencies ? Object.keys(pais.currencies)[0] : null;
+  const moeda = codigoMoeda ? pais.currencies[codigoMoeda] : null;
+  const nomeMoeda = moeda?.name === 'Brazilian real' ? 'Real' : moeda?.name;
+  const fusoHorario = pais.timezones?.find((timezone) => timezone === 'UTC-03:00')
+    || pais.timezones?.[0];
+
   return {
     codigo: pais.cca3 || pais.cca2,
     nome: pais.translations?.por?.common || pais.name?.common || 'País',
     nomeOficial: pais.translations?.por?.official || pais.name?.official || 'Nome oficial não informado',
-    capital: Array.isArray(pais.capital) && pais.capital.length > 0
-      ? pais.capital[0]
-      : 'Não informada',
-    populacao: formatarNumero(pais.population),
-    idioma: formatarLista(pais.languages),
-    moeda: formatarMoeda(pais.currencies),
-    regiao: traduzirRegiao(pais.region),
-    subRegiao: traduzirSubRegiao(pais.subregion),
-    continente: traduzirRegiao(Array.isArray(pais.continents) ? pais.continents[0] : pais.continents),
-    fusoHorario: formatarFuso(pais.timezones),
+    capital: capital || 'Não informada',
+    populacao: pais.population?.toLocaleString('pt-BR') || 'Não informado',
+    idioma: pais.languages ? Object.values(pais.languages).join(', ') : 'Não informado',
+    moeda: nomeMoeda ? `${nomeMoeda} (${codigoMoeda})` : codigoMoeda || 'Não informado',
+    regiao: regioes[pais.region] || pais.region || 'Não informado',
+    subRegiao: subRegioes[pais.subregion] || pais.subregion || 'Não informado',
+    continente: regioes[continente] || continente || 'Não informado',
+    fusoHorario: fusoHorario || 'Não informado',
     bandeira: pais.flags?.png,
   };
 }
@@ -179,9 +141,12 @@ export default function DetalhePaisScreen({ navigation, route }) {
     }
 
     try {
+      const usuario = await buscarUsuarioPerfil();
+      const usuarioId = getUsuarioIdFavoritos(usuario);
+
       const resposta = await api.get('/favoritos', {
         params: {
-          'usuarioId:eq': USUARIO_PADRAO_ID,
+          'usuarioId:eq': usuarioId,
           'codigo:eq': codigo,
         },
       });
@@ -202,6 +167,8 @@ export default function DetalhePaisScreen({ navigation, route }) {
 
     try {
       setSalvandoFavorito(true);
+      const usuario = await buscarUsuarioPerfil();
+      const usuarioId = getUsuarioIdFavoritos(usuario);
 
       if (favorito && favoritoId) {
         await api.delete(`/favoritos/${favoritoId}`);
@@ -211,8 +178,7 @@ export default function DetalhePaisScreen({ navigation, route }) {
       }
 
       const novoFavorito = {
-        id: `${codigo}-${USUARIO_PADRAO_ID}`,
-        usuarioId: USUARIO_PADRAO_ID,
+        usuarioId,
         codigo,
         nome: pais.nome,
         capital: pais.capital,

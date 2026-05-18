@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import {
-  Alert,
+  ActivityIndicator,
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -8,24 +11,57 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 
-import './EditarPerfil.css';
+import { mostrarAlerta } from './alertaPerfil';
+import { atualizarUsuarioPerfil, buscarUsuarioPerfil } from './perfilApi';
 
 export default function EditarPerfilScreen({ navigation }) {
-  const [nome, setNome] = useState('João da Silva');
-  const email = 'joao@email.com';
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [foto, setFoto] = useState('');
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
 
-  function salvarPerfil() {
+  async function carregarPerfil() {
+    try {
+      const usuario = await buscarUsuarioPerfil();
+
+      setNome(usuario.nome || '');
+      setEmail(usuario.email || '');
+      setFoto(usuario.foto || '');
+    } catch (error) {
+      mostrarAlerta('Erro', 'Não foi possível carregar os dados do perfil.');
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function salvarPerfil() {
     if (!nome.trim()) {
-      Alert.alert('Nome obrigatório', 'Informe o nome do usuário para salvar.');
+      mostrarAlerta('Nome obrigatório', 'Informe o nome do usuário para salvar.');
       return;
     }
 
-    Alert.alert('Perfil atualizado', 'O nome foi atualizado localmente nesta tela.');
-    navigation.goBack();
+    try {
+      setSalvando(true);
+
+      await atualizarUsuarioPerfil({
+        nome: nome.trim(),
+      });
+
+      mostrarAlerta('Perfil atualizado', 'Os dados foram salvos no JSON Server.', () => {
+        navigation.goBack();
+      });
+    } catch (error) {
+      mostrarAlerta('Erro', 'Não foi possível salvar os dados do perfil.');
+    } finally {
+      setSalvando(false);
+    }
   }
+
+  useEffect(() => {
+    carregarPerfil();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -43,40 +79,58 @@ export default function EditarPerfilScreen({ navigation }) {
 
       <View style={styles.content}>
         <View style={styles.avatarCircle}>
-          <Ionicons name="person" size={58} color="#0868df" />
+          {foto ? (
+            <Image source={{ uri: foto }} style={styles.avatarImage} />
+          ) : (
+            <Ionicons name="person" size={58} color="#0868df" />
+          )}
         </View>
 
-        <View style={styles.form}>
-          <Text style={styles.label}>Nome</Text>
-          <View style={styles.inputBox}>
-            <Ionicons name="person" size={21} color="#707b8c" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Nome do usuário"
-              placeholderTextColor="#8f99aa"
-              value={nome}
-              onChangeText={setNome}
-            />
+        {carregando ? (
+          <View style={styles.statusContainer}>
+            <ActivityIndicator size="large" color="#0868df" />
+            <Text style={styles.statusText}>Carregando perfil...</Text>
           </View>
+        ) : (
+          <View style={styles.form}>
+            <Text style={styles.label}>Nome</Text>
+            <View style={styles.inputBox}>
+              <Ionicons name="person" size={21} color="#707b8c" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Nome do usuário"
+                placeholderTextColor="#8f99aa"
+                value={nome}
+                onChangeText={setNome}
+              />
+            </View>
 
-          <Text style={styles.label}>E-mail</Text>
-          <View style={[styles.inputBox, styles.disabledInputBox]}>
-            <Ionicons name="mail" size={21} color="#8f99aa" style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, styles.disabledInput]}
-              value={email}
-              editable={false}
-              selectTextOnFocus={false}
-              keyboardType="email-address"
-            />
+            <Text style={styles.label}>E-mail</Text>
+            <View style={[styles.inputBox, styles.disabledInputBox]}>
+              <Ionicons name="mail" size={21} color="#8f99aa" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, styles.disabledInput]}
+                value={email}
+                editable={false}
+                selectTextOnFocus={false}
+                keyboardType="email-address"
+              />
+            </View>
+            <Text style={styles.helpText}>O e-mail não pode ser alterado por esta tela.</Text>
+
+            <TouchableOpacity
+              style={[styles.saveButton, salvando && styles.saveButtonDisabled]}
+              activeOpacity={0.85}
+              disabled={salvando}
+              onPress={salvarPerfil}
+            >
+              <Ionicons name="checkmark-circle" size={22} color="#ffffff" />
+              <Text style={styles.saveButtonText}>
+                {salvando ? 'Salvando...' : 'Salvar Alterações'}
+              </Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.helpText}>O e-mail não pode ser alterado por esta tela.</Text>
-
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.85} onPress={salvarPerfil}>
-            <Ionicons name="checkmark-circle" size={22} color="#ffffff" />
-            <Text style={styles.saveButtonText}>Salvar Alterações</Text>
-          </TouchableOpacity>
-        </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -122,6 +176,24 @@ const styles = StyleSheet.create({
     borderRadius: 56,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  statusContainer: {
+    marginTop: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusText: {
+    color: '#5f6878',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 12,
+    textAlign: 'center',
   },
   form: {
     width: '100%',
@@ -177,6 +249,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
   },
   saveButtonText: {
     color: '#ffffff',

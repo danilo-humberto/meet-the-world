@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -9,11 +11,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 
-import { api, USUARIO_PADRAO_ID } from '../services/api';
-import './Favoritos.css';
+import { api } from '../services/api';
+import { buscarUsuarioPerfil, getUsuarioIdFavoritos } from '../perfil/perfilApi';
 
 export default function FavoritosScreen() {
   const [favoritos, setFavoritos] = useState([]);
@@ -25,9 +25,12 @@ export default function FavoritosScreen() {
       setCarregando(true);
       setErro('');
 
+      const usuario = await buscarUsuarioPerfil();
+      const usuarioId = getUsuarioIdFavoritos(usuario);
+
       const resposta = await api.get('/favoritos', {
         params: {
-          'usuarioId:eq': USUARIO_PADRAO_ID,
+          'usuarioId:eq': usuarioId,
         },
       });
 

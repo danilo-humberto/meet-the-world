@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 
-import { api, USUARIO_PADRAO_ID } from '../services/api';
-import './Perfil.css';
+import { getAuth, signOut } from "firebase/auth";
+import { api } from '../services/api';
+import { buscarUsuarioPerfil, getUsuarioIdFavoritos } from './perfilApi';
 
 const opcoesPerfil = [
   {
@@ -26,17 +29,42 @@ const opcoesPerfil = [
 ];
 
 export default function PerfilScreen({ navigation }) {
+  const [usuario, setUsuario] = useState(null);
   const [totalFavoritos, setTotalFavoritos] = useState(0);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState('');
 
   function sair() {
-    navigation.replace('Login');
+    const auth = getAuth();
+
+    signOut(auth).then(() => {
+      navigation.navigate('Login')
+    }).catch((error) => {
+      setErro("Erro ao sair da conta")
+    })
+  }
+
+  async function carregarPerfil() {
+    try {
+      setErro('');
+      const usuarioEncontrado = await buscarUsuarioPerfil();
+
+      setUsuario(usuarioEncontrado);
+    } catch (error) {
+      setErro('Não foi possível carregar os dados do perfil.');
+    } finally {
+      setCarregando(false);
+    }
   }
 
   async function carregarTotalFavoritos() {
     try {
+      const usuarioEncontrado = await buscarUsuarioPerfil();
+      const usuarioId = getUsuarioIdFavoritos(usuarioEncontrado);
+
       const resposta = await api.get('/favoritos', {
         params: {
-          'usuarioId:eq': USUARIO_PADRAO_ID,
+          'usuarioId:eq': usuarioId,
         },
       });
 
@@ -47,8 +75,16 @@ export default function PerfilScreen({ navigation }) {
   }
 
   useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      carregarPerfil();
+      carregarTotalFavoritos();
+    });
+
     carregarTotalFavoritos();
-  }, []);
+    carregarPerfil();
+
+    return unsubscribe;
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -65,48 +101,62 @@ export default function PerfilScreen({ navigation }) {
       </View>
 
       <View style={styles.content}>
-        <View style={styles.avatarArea}>
-          <View style={styles.avatarCircle}>
-            <Ionicons name="person" size={58} color="#0868df" />
+        {carregando ? (
+          <View style={styles.statusContainer}>
+            <ActivityIndicator size="large" color="#0868df" />
+            <Text style={styles.statusText}>Carregando perfil...</Text>
           </View>
+        ) : (
+          <>
+            <View style={styles.avatarArea}>
+              <View style={styles.avatarCircle}>
+                {usuario?.foto ? (
+                  <Image source={{ uri: usuario.foto }} style={styles.avatarImage} />
+                ) : (
+                  <Ionicons name="person" size={58} color="#0868df" />
+                )}
+              </View>
 
-          <Text style={styles.userName}>João da Silva</Text>
-          <Text style={styles.userEmail}>joao@email.com</Text>
-        </View>
+              <Text style={styles.userName}>{usuario?.nome || 'Usuário'}</Text>
+              <Text style={styles.userEmail}>{usuario?.email || 'E-mail não informado'}</Text>
+              {erro ? <Text style={styles.errorText}>{erro}</Text> : null}
+            </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Favoritos</Text>
-            <Text style={styles.statValue}>{totalFavoritos}</Text>
-          </View>
-        </View>
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <Text style={styles.statLabel}>Favoritos</Text>
+                <Text style={styles.statValue}>{totalFavoritos}</Text>
+              </View>
+            </View>
 
-        <View style={styles.optionsCard}>
-          {opcoesPerfil.map((opcao) => (
-            <TouchableOpacity
-              key={opcao.id}
-              style={styles.optionItem}
-              activeOpacity={0.8}
-              onPress={() => {
-                if (opcao.id === 'editar') {
-                  navigation.navigate('EditarPerfil');
-                }
+            <View style={styles.optionsCard}>
+              {opcoesPerfil.map((opcao) => (
+                <TouchableOpacity
+                  key={opcao.id}
+                  style={styles.optionItem}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    if (opcao.id === 'editar') {
+                      navigation.navigate('EditarPerfil');
+                    }
 
-                if (opcao.id === 'foto') {
-                  navigation.navigate('AlterarFoto');
-                }
-              }}
-            >
-              <Ionicons name={opcao.icone} size={21} color="#687485" />
-              <Text style={styles.optionText}>{opcao.titulo}</Text>
+                    if (opcao.id === 'foto') {
+                      navigation.navigate('AlterarFoto');
+                    }
+                  }}
+                >
+                  <Ionicons name={opcao.icone} size={21} color="#687485" />
+                  <Text style={styles.optionText}>{opcao.titulo}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={styles.logoutCard} activeOpacity={0.8} onPress={sair}>
+              <Ionicons name="log-out-outline" size={23} color="#ff3b30" />
+              <Text style={styles.logoutText}>Sair</Text>
             </TouchableOpacity>
-          ))}
-        </View>
-
-        <TouchableOpacity style={styles.logoutCard} activeOpacity={0.8} onPress={sair}>
-          <Ionicons name="log-out-outline" size={23} color="#ff3b30" />
-          <Text style={styles.logoutText}>Sair</Text>
-        </TouchableOpacity>
+          </>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -154,6 +204,12 @@ const styles = StyleSheet.create({
     borderRadius: 56,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   userName: {
     color: '#10182f',
@@ -166,6 +222,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     marginTop: 4,
+  },
+  statusContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusText: {
+    color: '#5f6878',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: '#e24646',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 10,
+    textAlign: 'center',
   },
   statsRow: {
     marginTop: 22,

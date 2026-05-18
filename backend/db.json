@@ -4,19 +4,98 @@
       "id": "1",
       "nome": "João da Silva",
       "email": "joao@email.com",
+      "foto": "",
+      "fotoPublicId": "",
       "createdAt": "2026-05-18T00:00:00.000Z"
+    },
+    {
+      "id": "Q8w-7c0TB6Q",
+      "nome": "Danilo Humberto Paz de Melo",
+      "email": "danilo@gmail.com",
+      "foto": "https://res.cloudinary.com/dtjie5qfj/image/upload/v1779143077/qus2xomazjlscvvcznnh.png",
+      "fotoPublicId": "qus2xomazjlscvvcznnh",
+      "createdAt": "2026-05-18T21:55:27.616Z",
+      "firebaseUid": "cKbrUkdmjzQcGpzCo3f4DIlwYCp2"
+    },
+    {
+      "firebaseUid": "IlUCaavBykVZmqeYa2E7SKM6PA22",
+      "nome": "Nilson",
+      "email": "njr1466@gmail.com",
+      "foto": "https://res.cloudinary.com/dtjie5qfj/image/upload/v1779143771/b0yhvmmrs2ngbhw1ckfh.png",
+      "fotoPublicId": "b0yhvmmrs2ngbhw1ckfh",
+      "createdAt": "2026-05-18T22:34:09.108Z",
+      "id": "UwMwGTfhmw8"
+    },
+    {
+      "firebaseUid": "JHNC1YP1W2UxUZ7gibhHHj63N7k1",
+      "nome": "Teste2",
+      "email": "teste@gmail.com",
+      "foto": "https://res.cloudinary.com/dtjie5qfj/image/upload/v1779143851/nz9n5dczonutfp0vzuwa.jpg",
+      "fotoPublicId": "nz9n5dczonutfp0vzuwa",
+      "createdAt": "2026-05-18T22:36:49.019Z",
+      "id": "4I17_n4yG1Y"
     }
   ],
   "favoritos": [
     {
-      "id": "BRA-1",
+      "id": "_j_Kew1F78c",
+      "usuarioId": 1,
+      "codigo": "ZAF",
+      "nome": "África do Sul",
+      "capital": "Pretoria",
+      "bandeira": "https://flagcdn.com/w320/za.png",
+      "imagem": "https://flagcdn.com/w320/za.png",
+      "createdAt": "2026-05-18T22:04:05.848Z"
+    },
+    {
+      "id": "dQm6m2FR3KA",
       "usuarioId": 1,
       "codigo": "BRA",
       "nome": "Brasil",
       "capital": "Brasília",
       "bandeira": "https://flagcdn.com/w320/br.png",
-      "imagem": "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=400&h=260&fit=crop",
-      "createdAt": "2026-05-18T00:00:00.000Z"
+      "imagem": "https://flagcdn.com/w320/br.png",
+      "createdAt": "2026-05-18T22:04:23.560Z"
+    },
+    {
+      "usuarioId": "Q8w-7c0TB6Q",
+      "codigo": "ALA",
+      "nome": "Alândia",
+      "capital": "Mariehamn",
+      "bandeira": "https://flagcdn.com/w320/ax.png",
+      "imagem": "https://flagcdn.com/w320/ax.png",
+      "createdAt": "2026-05-18T22:23:44.557Z",
+      "id": "C2jiYRf3on8"
+    },
+    {
+      "usuarioId": "UwMwGTfhmw8",
+      "codigo": "ALA",
+      "nome": "Alândia",
+      "capital": "Mariehamn",
+      "bandeira": "https://flagcdn.com/w320/ax.png",
+      "imagem": "https://flagcdn.com/w320/ax.png",
+      "createdAt": "2026-05-18T22:34:31.297Z",
+      "id": "WgtNA3PfZ8Q"
+    },
+    {
+      "usuarioId": "UwMwGTfhmw8",
+      "codigo": "DEU",
+      "nome": "Alemanha",
+      "capital": "Berlin",
+      "bandeira": "https://flagcdn.com/w320/de.png",
+      "imagem": "https://flagcdn.com/w320/de.png",
+      "createdAt": "2026-05-18T22:34:40.192Z",
+      "id": "Jp5ZOVcd2Mo"
+    },
+    {
+      "usuarioId": "4I17_n4yG1Y",
+      "codigo": "ALB",
+      "nome": "Albânia",
+      "capital": "Tirana",
+      "bandeira": "https://flagcdn.com/w320/al.png",
+      "imagem": "https://flagcdn.com/w320/al.png",
+      "createdAt": "2026-05-18T22:37:11.323Z",
+      "id": "ZYviFAspFg4"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

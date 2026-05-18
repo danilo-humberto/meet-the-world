@@ -6,9 +6,9 @@ const cloudinary = require("cloudinary").v2;
 
 // Configure sua conta do Cloudinary
 cloudinary.config({
-  cloud_name: "dmzdsr0af",
-  api_key: "388736935942643",
-  api_secret: "ftWf6qvp7zF3G2QlzjsPa8TfAFM",
+  cloud_name: "dtjie5qfj",
+  api_key: "829156744595591",
+  api_secret: "T_RT_kL8FcmWXWNdHILTydW0Z00",
 });
 
 const app = express();
@@ -19,7 +19,7 @@ app.use(bodyParser.json());
 
 // ✅ Listar imagens com uma tag (usa o upload_preset como tag)
 app.get("/images", async (req, res) => {
-  const { tag = "aula8ifpe" } = req.query;
+  const { tag = "meet-the-world" } = req.query;
 
   try {
     const result = await cloudinary.api.resources_by_tag(tag, {
@@ -53,5 +53,5 @@ app.delete("/delete-image", async (req, res) => {
 
 // Inicia o servidor
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://10.31.88.99:${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });

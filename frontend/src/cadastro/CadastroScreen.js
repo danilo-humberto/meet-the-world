@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+import { useState } from 'react';
 import {
   Alert,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -8,11 +12,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 
 import { api } from '../services/api';
-import './Cadastro.css';
+
+function mostrarAlerta(titulo, mensagem, aoFechar) {
+  if (Platform.OS === 'web') {
+    window.alert(`${titulo}\n\n${mensagem}`);
+    aoFechar?.();
+    return;
+  }
+
+  if (aoFechar) {
+    Alert.alert(titulo, mensagem, [{ text: 'OK', onPress: aoFechar }]);
+    return;
+  }
+
+  Alert.alert(titulo, mensagem);
+}
 
 export default function CadastroScreen({ navigation }) {
   const [nome, setNome] = useState('');
@@ -34,12 +50,12 @@ export default function CadastroScreen({ navigation }) {
 
   async function cadastrarUsuario() {
     if (!nome.trim() || !email.trim() || !senha.trim() || !confirmarSenha.trim()) {
-      Alert.alert('Campos obrigatórios', 'Preencha todos os campos para continuar.');
+      mostrarAlerta('Campos obrigatórios', 'Preencha todos os campos para continuar.');
       return;
     }
 
     if (senha !== confirmarSenha) {
-      Alert.alert('Senhas diferentes', 'A senha e a confirmação precisam ser iguais.');
+      mostrarAlerta('Senhas diferentes', 'A senha e a confirmação precisam ser iguais.');
       return;
     }
 
@@ -47,29 +63,40 @@ export default function CadastroScreen({ navigation }) {
       setSalvando(true);
 
       const emailNormalizado = email.trim().toLowerCase();
-      const usuariosExistentes = await api.get('/usuarios', {
-        params: {
-          'email:eq': emailNormalizado,
-        },
-      });
+      const auth = getAuth();
+      const credencial = await createUserWithEmailAndPassword(auth, emailNormalizado, senha);
 
-      if (usuariosExistentes.data.length > 0) {
-        Alert.alert('E-mail já cadastrado', 'Use outro e-mail ou faça login.');
+      try {
+        await api.post('/usuarios', {
+          firebaseUid: credencial.user.uid,
+          nome: nome.trim(),
+          email: emailNormalizado,
+          foto: '',
+          fotoPublicId: '',
+          createdAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        mostrarAlerta(
+          'Conta criada',
+          'A conta foi criada no Firebase, mas não foi salva no JSON Server. Verifique se ele está rodando.'
+        );
         return;
       }
 
-      await api.post('/usuarios', {
-        nome: nome.trim(),
-        email: emailNormalizado,
-        createdAt: new Date().toISOString(),
-      });
-
-      Alert.alert('Cadastro salvo', 'Usuário cadastrado com sucesso.');
-      navigation.navigate('Login');
+      mostrarAlerta(
+        'Cadastro realizado',
+        'Cadastro realizado com sucesso.',
+        () => navigation.navigate('Login')
+      );
     } catch (error) {
-      Alert.alert(
+      if (error.code === 'auth/email-already-in-use') {
+        mostrarAlerta('E-mail já cadastrado', 'Já existe uma conta com esse e-mail.');
+        return;
+      }
+
+      mostrarAlerta(
         'Erro ao cadastrar',
-        'Não foi possível salvar o cadastro. Verifique se o JSON Server está rodando.'
+        'Não foi possível realizar o cadastro. Verifique os dados e tente novamente.'
       );
     } finally {
       setSalvando(false);

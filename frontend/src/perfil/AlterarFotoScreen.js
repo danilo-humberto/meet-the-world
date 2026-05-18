@@ -1,27 +1,193 @@
-import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-import * as ImagePicker from 'expo-image-picker';
 
-import './AlterarFoto.css';
+import {
+  CLOUD_NAME,
+  UPLOAD_PRESET,
+  cloudinary,
+} from '../services/api';
+import { mostrarAlerta } from './alertaPerfil';
+import { atualizarUsuarioPerfil, buscarUsuarioPerfil } from './perfilApi';
 
 export default function AlterarFotoScreen({ navigation }) {
-  const [imagemPerfil, setImagemPerfil] = useState(null);
+  const [imagemPerfil, setImagemPerfil] = useState('');
+  const [fotoPublicId, setFotoPublicId] = useState('');
+  const [carregando, setCarregando] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  async function carregarFoto() {
+    try {
+      const usuario = await buscarUsuarioPerfil();
+
+      setImagemPerfil(usuario.foto || '');
+      setFotoPublicId(usuario.fotoPublicId || '');
+    } catch (error) {
+      mostrarAlerta('Erro', 'Não foi possível carregar a foto do perfil.');
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function uploadToCloudinary(photo) {
+    setUploading(true);
+
+    const data = new FormData();
+
+    if (Platform.OS === 'web' && photo.file) {
+      data.append('file', photo.file);
+    } else {
+      data.append('file', {
+        uri: photo.uri,
+        type: photo.mimeType || photo.type || 'image/jpeg',
+        name: photo.fileName || 'upload.jpg',
+      });
+    }
+
+    data.append('upload_preset', UPLOAD_PRESET);
+    data.append('tags', UPLOAD_PRESET);
+
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+        method: 'POST',
+        body: data,
+      });
+      const result = await res.json();
+
+      if (!result.secure_url) {
+        mostrarAlerta('Erro no upload', 'Falha ao enviar imagem para Cloudinary.');
+        return null;
+      }
+
+      return result;
+    } catch (error) {
+      mostrarAlerta('Erro no upload', error.message);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function deleteImage(publicId) {
+    try {
+      const resposta = await cloudinary.delete('/delete-image', {
+        data: {
+          public_id: publicId,
+        },
+      });
+
+      return resposta.data.result === 'ok' || resposta.data.result === 'not found';
+    } catch (error) {
+      mostrarAlerta('Erro', error.message);
+      return false;
+    }
+  }
+
+  async function salvarFoto(photo) {
+    const fotoAntigaPublicId = fotoPublicId;
+    const imagemCloudinary = await uploadToCloudinary(photo);
+
+    if (!imagemCloudinary) {
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      await atualizarUsuarioPerfil({
+        foto: imagemCloudinary.secure_url,
+        fotoPublicId: imagemCloudinary.public_id,
+      });
+
+      setImagemPerfil(imagemCloudinary.secure_url);
+      setFotoPublicId(imagemCloudinary.public_id);
+
+      if (fotoAntigaPublicId && fotoAntigaPublicId !== imagemCloudinary.public_id) {
+        await deleteImage(fotoAntigaPublicId);
+      }
+
+      mostrarAlerta('Foto atualizada', 'A foto foi enviada ao Cloudinary e salva no JSON Server.');
+    } catch (error) {
+      mostrarAlerta('Erro', 'Não foi possível salvar a foto do perfil.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function confirmarRemocaoFoto() {
+    if (!imagemPerfil) {
+      mostrarAlerta('Foto de perfil', 'Nenhuma foto cadastrada para remover.');
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      const confirmou = window.confirm('Deseja realmente remover esta imagem?');
+
+      if (confirmou) {
+        removerFoto();
+      }
+
+      return;
+    }
+
+    Alert.alert('Deletar imagem', 'Deseja realmente remover esta imagem?', [
+      {
+        text: 'Cancelar',
+        style: 'cancel',
+      },
+      {
+        text: 'Remover',
+        style: 'destructive',
+        onPress: removerFoto,
+      },
+    ]);
+  }
+
+  async function removerFoto() {
+    try {
+      setUploading(true);
+
+      if (fotoPublicId) {
+        const deletou = await deleteImage(fotoPublicId);
+
+        if (!deletou) {
+          mostrarAlerta('Erro', 'Falha ao deletar imagem.');
+          return;
+        }
+      }
+
+      await atualizarUsuarioPerfil({
+        foto: '',
+        fotoPublicId: '',
+      });
+
+      setImagemPerfil('');
+      setFotoPublicId('');
+      mostrarAlerta('Sucesso', 'Imagem deletada.');
+    } catch (error) {
+      mostrarAlerta('Erro', 'Não foi possível remover a foto do perfil.');
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function escolherDaGaleria() {
     const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permissao.granted) {
-      Alert.alert('Permissão necessária', 'Permita o acesso à galeria para escolher uma foto.');
+      mostrarAlerta('Permissão necessária', 'Permita o acesso à galeria para escolher uma foto.');
       return;
     }
 
@@ -33,7 +199,7 @@ export default function AlterarFotoScreen({ navigation }) {
     });
 
     if (!resultado.canceled) {
-      setImagemPerfil(resultado.assets[0].uri);
+      await salvarFoto(resultado.assets[0]);
     }
   }
 
@@ -41,7 +207,7 @@ export default function AlterarFotoScreen({ navigation }) {
     const permissao = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permissao.granted) {
-      Alert.alert('Permissão necessária', 'Permita o acesso à câmera para tirar uma foto.');
+      mostrarAlerta('Permissão necessária', 'Permita o acesso à câmera para tirar uma foto.');
       return;
     }
 
@@ -52,9 +218,13 @@ export default function AlterarFotoScreen({ navigation }) {
     });
 
     if (!resultado.canceled) {
-      setImagemPerfil(resultado.assets[0].uri);
+      await salvarFoto(resultado.assets[0]);
     }
   }
+
+  useEffect(() => {
+    carregarFoto();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -73,7 +243,9 @@ export default function AlterarFotoScreen({ navigation }) {
       <View style={styles.content}>
         <View style={styles.avatarArea}>
           <View style={styles.avatarCircle}>
-            {imagemPerfil ? (
+            {carregando ? (
+              <ActivityIndicator size="large" color="#0868df" />
+            ) : imagemPerfil ? (
               <Image source={{ uri: imagemPerfil }} style={styles.avatarImage} />
             ) : (
               <Ionicons name="person" size={70} color="#0868df" />
@@ -86,22 +258,41 @@ export default function AlterarFotoScreen({ navigation }) {
         </View>
 
         <Text style={styles.title}>Escolha uma imagem</Text>
-        <Text style={styles.subtitle}>Sua foto será enviada para o Cloudinary</Text>
 
         <View style={styles.actions}>
           <TouchableOpacity
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, uploading && styles.buttonDisabled]}
             activeOpacity={0.85}
+            disabled={uploading}
             onPress={escolherDaGaleria}
           >
             <Ionicons name="image" size={22} color="#0868df" />
-            <Text style={styles.secondaryButtonText}>Escolher da Galeria</Text>
+            <Text style={styles.secondaryButtonText}>
+              {uploading ? 'Enviando...' : 'Escolher da Galeria'}
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85} onPress={tirarFoto}>
+          <TouchableOpacity
+            style={[styles.primaryButton, uploading && styles.buttonDisabled]}
+            activeOpacity={0.85}
+            disabled={uploading}
+            onPress={tirarFoto}
+          >
             <Ionicons name="camera" size={22} color="#ffffff" />
             <Text style={styles.primaryButtonText}>Tirar Foto</Text>
           </TouchableOpacity>
+
+          {imagemPerfil ? (
+            <TouchableOpacity
+              style={[styles.deleteButton, uploading && styles.buttonDisabled]}
+              activeOpacity={0.85}
+              disabled={uploading}
+              onPress={confirmarRemocaoFoto}
+            >
+              <Ionicons name="trash" size={22} color="#ff3b30" />
+              <Text style={styles.deleteButtonText}>Remover Foto</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
     </SafeAreaView>
@@ -217,8 +408,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   primaryButtonText: {
     color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  deleteButton: {
+    height: 58,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ffd4d1',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  deleteButtonText: {
+    color: '#ff3b30',
     fontSize: 15,
     fontWeight: '800',
   },

@@ -6,7 +6,6 @@ import HomeScreen from '../home/HomeScreen';
 import FavoritosScreen from '../favoritos/FavoritosScreen';
 import PerfilScreen from '../perfil/PerfilScreen';
 
-import './Main.css';
 
 const tabs = [
   {

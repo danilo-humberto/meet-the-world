@@ -1,4 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,11 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-import axios from 'axios';
-
-import './Home.css';
 
 const COUNTRIES_URL =
   'https://restcountries.com/v3.1/all?fields=name,translations,capital,flags,cca2,cca3';
