@@ -1,8 +1,13 @@
 {
+  "scripts": {
+    "api": "json-server -p 3002 -h 0.0.0.0 db.json",
+    "cloudinary": "node server.js"
+  },
   "dependencies": {
     "body-parser": "^2.2.2",
     "cloudinary": "^2.10.0",
     "cors": "^2.8.6",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "json-server": "^1.0.0-beta.15"
   }
 }

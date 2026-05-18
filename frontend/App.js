@@ -1,21 +1,32 @@
-import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import LoginScreen from './src/login/LoginScreen';
+import CadastroScreen from './src/cadastro/CadastroScreen';
+import MainScreen from './src/main/MainScreen';
+import DetalhePaisScreen from './src/pais/DetalhePaisScreen';
+import AlterarFotoScreen from './src/perfil/AlterarFotoScreen';
+import EditarPerfilScreen from './src/perfil/EditarPerfilScreen';
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName="Login"
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Cadastro" component={CadastroScreen} />
+        <Stack.Screen name="Main" component={MainScreen} />
+        <Stack.Screen name="DetalhePais" component={DetalhePaisScreen} />
+        <Stack.Screen name="AlterarFoto" component={AlterarFotoScreen} />
+        <Stack.Screen name="EditarPerfil" component={EditarPerfilScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

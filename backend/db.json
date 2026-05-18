@@ -1,0 +1,23 @@
+{
+  "usuarios": [
+    {
+      "id": "1",
+      "nome": "João da Silva",
+      "email": "joao@email.com",
+      "createdAt": "2026-05-18T00:00:00.000Z"
+    }
+  ],
+  "favoritos": [
+    {
+      "id": "BRA-1",
+      "usuarioId": 1,
+      "codigo": "BRA",
+      "nome": "Brasil",
+      "capital": "Brasília",
+      "bandeira": "https://flagcdn.com/w320/br.png",
+      "imagem": "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=400&h=260&fit=crop",
+      "createdAt": "2026-05-18T00:00:00.000Z"
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}
